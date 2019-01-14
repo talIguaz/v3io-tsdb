@@ -136,6 +136,9 @@ func (it *rawChunkIterator) Next() bool {
 		return false
 	}
 
+	// Free up memory of old chunk
+	it.chunks[it.chunkIndex] = nil
+
 	it.chunkIndex++
 	it.iter = it.chunks[it.chunkIndex].Iterator()
 	return it.Next()
