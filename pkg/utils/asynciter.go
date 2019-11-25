@@ -170,7 +170,8 @@ func (ic *AsyncItemsCursor) processResponse() error {
 	endTime := time.Now()
 	defer resp.Release()
 
-	ic.logger.Info("%v - waited for get items for %v", ic.id, endTime.Sub(startTime))
+	ic.logger.Info("%v - waited for get items for %v - path: %v, attr: %v",
+		ic.id, endTime.Sub(startTime), ic.input.Path, ic.input.AttributeNames)
 	// Ignore 404s
 	if e, hasErrorCode := resp.Error.(v3ioerrors.ErrorWithStatusCode); hasErrorCode && e.StatusCode() == http.StatusNotFound {
 		ic.logger.Debug("Got 404 - error: %v, request: %v", resp.Error, resp.Request().Input)
