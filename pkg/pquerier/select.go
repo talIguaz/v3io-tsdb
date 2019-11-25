@@ -47,6 +47,8 @@ type selectQueryContext struct {
 }
 
 func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *SelectParams) (*frameIterator, error) {
+	queryCtx.logger.Info("selectQueryContext.start")
+	startTime := time.Now()
 	queryCtx.dataFrames = make(map[uint64]*dataFrame)
 
 	queryCtx.queryParams = params
@@ -65,6 +67,7 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 	// We query every partition for every requested metric
 	queries := make([]*partQuery, len(parts)*len(queryCtx.columnsSpecByMetric))
 
+	beforeQuery := time.Now()
 	var queryIndex int
 	for _, part := range parts {
 		currQueries, err := queryCtx.queryPartition(part)
@@ -77,11 +80,13 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 		}
 	}
 
+	startingGoRoutines := time.Now()
 	err = queryCtx.startCollectors()
 	if err != nil {
 		return nil, err
 	}
 
+	processResults := time.Now()
 	for _, query := range queries {
 		err = queryCtx.processQueryResults(query)
 		if err != nil {
@@ -97,6 +102,7 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 	queryCtx.wg.Wait()
 	close(queryCtx.errorChannel)
 
+	finishedProcess := time.Now()
 	// return first error
 	err = <-queryCtx.errorChannel
 	if err != nil {
@@ -107,6 +113,10 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 		queryCtx.totalColumns = queryCtx.frameList[0].Len()
 	}
 
+	endTime := time.Now()
+	queryCtx.logger.Info("send queries took %v, starting collectors: %v, process results: %v, total: %v",
+		startingGoRoutines.Sub(beforeQuery), processResults.Sub(startingGoRoutines),
+		finishedProcess.Sub(processResults), endTime.Sub(startTime))
 	return NewFrameIterator(queryCtx)
 }
 

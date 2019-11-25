@@ -130,6 +130,7 @@ func (q *V3ioQuerier) Select(params *SelectParams) (utils.SeriesSet, error) {
 }
 
 func (q *V3ioQuerier) SelectDataFrame(params *SelectParams) (FrameSet, error) {
+	q.logger.Info("SelectDataFrame")
 	params.disableAllAggr = false
 	params.disableClientAggr = q.cfg.DisableClientAggr
 	iter, err := q.baseSelectQry(params, true)
