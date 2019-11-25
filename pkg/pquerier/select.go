@@ -116,7 +116,7 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 
 	endTime := time.Now()
 	queryCtx.logger.Info("send queries took %v, starting collectors: %v, reading getitems: %v, waiting for goroutines to finish: %v total: %v",
-		startingGoRoutines.Sub(beforeQuery), processResults.Sub(startingGoRoutines),
+		startingGoRoutines.Sub(beforeQuery), readingResults.Sub(startingGoRoutines),
 		processResults.Sub(readingResults), finishedProcess.Sub(processResults), endTime.Sub(startTime))
 	return NewFrameIterator(queryCtx)
 }
