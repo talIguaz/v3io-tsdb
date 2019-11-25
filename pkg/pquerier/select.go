@@ -86,7 +86,7 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 		return nil, err
 	}
 
-	processResults := time.Now()
+	readingResults := time.Now()
 	for _, query := range queries {
 		err = queryCtx.processQueryResults(query)
 		if err != nil {
@@ -94,6 +94,7 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 		}
 	}
 
+	processResults := time.Now()
 	for i := 0; i < queryCtx.workers; i++ {
 		close(queryCtx.requestChannels[i])
 	}
@@ -114,9 +115,9 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 	}
 
 	endTime := time.Now()
-	queryCtx.logger.Info("send queries took %v, starting collectors: %v, process results: %v, total: %v",
+	queryCtx.logger.Info("send queries took %v, starting collectors: %v, reading getitems: %v, waiting for goroutines to finish: %v total: %v",
 		startingGoRoutines.Sub(beforeQuery), processResults.Sub(startingGoRoutines),
-		finishedProcess.Sub(processResults), endTime.Sub(startTime))
+		processResults.Sub(readingResults), finishedProcess.Sub(processResults), endTime.Sub(startTime))
 	return NewFrameIterator(queryCtx)
 }
 
