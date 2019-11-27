@@ -85,7 +85,7 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 	if err != nil {
 		return nil, err
 	}
-
+	id := time.Now().Nanosecond()
 	readingResults := time.Now()
 	for _, query := range queries {
 		a := time.Now()
@@ -94,7 +94,7 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 		if err != nil {
 			return nil, err
 		}
-		queryCtx.logger.Info("query %v took %v ", query.iter.(*utils.AsyncItemsCursor).Id, b.Sub(a))
+		queryCtx.logger.Info("%v - query %v (%v) took %v ", id, query.name, query.iter.(*utils.AsyncItemsCursor).Id, b.Sub(a))
 	}
 
 	processResults := time.Now()
@@ -118,8 +118,8 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 	}
 
 	endTime := time.Now()
-	queryCtx.logger.Info("send queries took %v, starting collectors: %v, reading getitems: %v, waiting for goroutines to finish: %v total: %v",
-		startingGoRoutines.Sub(beforeQuery), readingResults.Sub(startingGoRoutines),
+	queryCtx.logger.Info("%v - send queries took %v, starting collectors: %v, reading getitems: %v, waiting for goroutines to finish: %v total: %v",
+		id, startingGoRoutines.Sub(beforeQuery), readingResults.Sub(startingGoRoutines),
 		processResults.Sub(readingResults), finishedProcess.Sub(processResults), endTime.Sub(startTime))
 	return NewFrameIterator(queryCtx)
 }
