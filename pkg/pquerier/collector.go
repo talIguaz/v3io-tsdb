@@ -3,6 +3,8 @@ package pquerier
 import (
 	"encoding/binary"
 	"math"
+	"sort"
+	"strings"
 
 	"github.com/v3io/v3io-tsdb/pkg/aggregate"
 	"github.com/v3io/v3io-tsdb/pkg/config"
@@ -65,6 +67,63 @@ func mainCollector(ctx *selectQueryContext, responseChannel chan *qryResults) {
 	lastValuePerMetric := make(map[uint64]float64, len(ctx.columnsSpecByMetric))
 
 	for res := range responseChannel {
+
+		// read label set
+		lsetAttr, lok := res.query.GetField(config.LabelSetAttrName).(string)
+		if !lok {
+			//return fmt.Errorf("could not find label set attribute in response, res:%v", res.query.GetFields())
+		}
+
+		lset, err := utils.LabelsFromString(lsetAttr)
+		if err != nil {
+			//return err
+		}
+
+		sort.Sort(lset) // maybe skipped if its written sorted
+		var hash uint64
+
+		if ctx.queryParams.GroupBy != "" {
+			groupByList := strings.Split(ctx.queryParams.GroupBy, ",")
+			newLset := make(utils.Labels, len(groupByList))
+			for i, label := range groupByList {
+				trimmed := strings.TrimSpace(label)
+				labelValue := lset.Get(trimmed)
+				if labelValue != "" {
+					newLset[i] = utils.Label{Name: trimmed, Value: labelValue}
+				} else {
+					//return fmt.Errorf("no label named %v found to group by", trimmed)
+				}
+			}
+			lset = newLset
+			hash = newLset.Hash()
+		} else if ctx.isCrossSeriesAggregate {
+			hash = uint64(0)
+			lset = utils.Labels{}
+		} else {
+			hash = lset.Hash()
+		}
+
+		// find or create data frame
+		frame, ok := ctx.dataFrames[hash]
+		if !ok {
+			var err error
+			frame, err = NewDataFrame(ctx.columnsSpec,
+				ctx.getOrCreateTimeColumn(),
+				lset,
+				hash,
+				ctx.isRawQuery(),
+				ctx.getResultBucketsSize(),
+				res.IsServerAggregates(),
+				ctx.showAggregateLabel)
+			if err != nil {
+				//return err
+			}
+			ctx.dataFrames[hash] = frame
+			ctx.frameList = append(ctx.frameList, frame)
+		}
+
+		res.frame = frame
+
 		if res.IsRawQuery() {
 			rawCollector(ctx, res)
 		} else {

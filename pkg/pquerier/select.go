@@ -87,15 +87,22 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 	}
 	id := time.Now().Nanosecond()
 	readingResults := time.Now()
+
+	waithere := sync.WaitGroup{}
+	waithere.Add(len(queries))
 	for _, query := range queries {
-		a := time.Now()
-		err = queryCtx.processQueryResults(query)
-		b := time.Now()
-		if err != nil {
-			return nil, err
-		}
-		queryCtx.logger.Info("%v - query %v (%v) took %v ", id, query.name, query.iter.(*utils.AsyncItemsCursor).Id, b.Sub(a))
+		go func() {
+			a := time.Now()
+			err = queryCtx.processQueryResults(query)
+			b := time.Now()
+			if err != nil {
+				//return nil, err
+			}
+			queryCtx.logger.Info("%v - query %v (%v) took %v ", id, query.name, query.iter.(*utils.AsyncItemsCursor).Id, b.Sub(a))
+			waithere.Done()
+		}()
 	}
+	waithere.Wait()
 
 	processResults := time.Now()
 	for i := 0; i < queryCtx.workers; i++ {
@@ -350,27 +357,27 @@ func (queryCtx *selectQueryContext) processQueryResults(query *partQuery) error 
 		} else {
 			hash = lset.Hash()
 		}
-
-		// find or create data frame
-		frame, ok := queryCtx.dataFrames[hash]
-		if !ok {
-			var err error
-			frame, err = NewDataFrame(queryCtx.columnsSpec,
-				queryCtx.getOrCreateTimeColumn(),
-				lset,
-				hash,
-				queryCtx.isRawQuery(),
-				queryCtx.getResultBucketsSize(),
-				results.IsServerAggregates(),
-				queryCtx.showAggregateLabel)
-			if err != nil {
-				return err
-			}
-			queryCtx.dataFrames[hash] = frame
-			queryCtx.frameList = append(queryCtx.frameList, frame)
-		}
-
-		results.frame = frame
+		//
+		//// find or create data frame
+		//frame, ok := queryCtx.dataFrames[hash]
+		//if !ok {
+		//	var err error
+		//	frame, err = NewDataFrame(queryCtx.columnsSpec,
+		//		queryCtx.getOrCreateTimeColumn(),
+		//		lset,
+		//		hash,
+		//		queryCtx.isRawQuery(),
+		//		queryCtx.getResultBucketsSize(),
+		//		results.IsServerAggregates(),
+		//		queryCtx.showAggregateLabel)
+		//	if err != nil {
+		//		return err
+		//	}
+		//	queryCtx.dataFrames[hash] = frame
+		//	queryCtx.frameList = append(queryCtx.frameList, frame)
+		//}
+		//
+		//results.frame = frame
 
 		workerNum := hash & uint64(queryCtx.workers-1)
 		queryCtx.requestChannels[workerNum] <- &results
