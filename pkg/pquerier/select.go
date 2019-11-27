@@ -88,10 +88,13 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 
 	readingResults := time.Now()
 	for _, query := range queries {
+		a := time.Now()
 		err = queryCtx.processQueryResults(query)
+		b := time.Now()
 		if err != nil {
 			return nil, err
 		}
+		queryCtx.logger.Info("query %v took %v ", query.iter.(*utils.AsyncItemsCursor).Id, b.Sub(a))
 	}
 
 	processResults := time.Now()
