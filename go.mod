@@ -21,7 +21,7 @@ require (
 	github.com/stretchr/testify v1.3.0
 	github.com/tinylib/msgp v1.1.0 // indirect
 	github.com/v3io/frames v0.0.0-20190328123118-1dad1ff610509e7b087d9cd390ed1b452caecf15
-	github.com/v3io/v3io-go v0.0.0-20191024084247-042df6b5ee40eb60996ab7f4e74ec9aa07d996c4
+	github.com/v3io/v3io-go v0.0.0-20191024084247-97cc03a96403df14145ffeac1a42bbfd8b62986b
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	golang.org/x/net v0.0.0-20181114220301-adae6a3d119a // indirect
 	golang.org/x/sync v0.0.0-20181108010431-42b317875d0f // indirect
@@ -34,3 +34,5 @@ replace (
 	labix.org/v2/mgo => github.com/go-mgo/mgo v0.0.0-20180705113738-7446a0344b7872c067b3d6e1b7642571eafbae17
 	launchpad.net/gocheck => github.com/go-check/check v0.0.0-20180628173108-788fd78401277ebd861206a03c884797c6ec5541
 )
+
+replace github.com/v3io/v3io-go => github.com/talIguaz/v3io-go v0.0.0-20190306105200-85098aa0945b7a9912b4fce921f2feca23075704
