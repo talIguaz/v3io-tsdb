@@ -91,7 +91,7 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 	waithere := sync.WaitGroup{}
 	waithere.Add(len(queries))
 	for _, query := range queries {
-		go func() {
+		go func(query *partQuery) {
 			a := time.Now()
 			err = queryCtx.processQueryResults(query)
 			b := time.Now()
@@ -100,7 +100,7 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 			}
 			queryCtx.logger.Info("%v - query %v (%v) took %v ", id, query.name, query.iter.(*utils.AsyncItemsCursor).Id, b.Sub(a))
 			waithere.Done()
-		}()
+		}(query)
 	}
 	waithere.Wait()
 
@@ -300,7 +300,6 @@ func (queryCtx *selectQueryContext) startCollectors() error {
 
 func (queryCtx *selectQueryContext) processQueryResults(query *partQuery) error {
 	for query.Next() {
-
 		// read metric name
 		name, ok := query.GetField(config.MetricNameAttrName).(string)
 		if !ok {
@@ -357,6 +356,9 @@ func (queryCtx *selectQueryContext) processQueryResults(query *partQuery) error 
 		} else {
 			hash = lset.Hash()
 		}
+
+		results.hash = hash
+		results.lset = lset
 		//
 		//// find or create data frame
 		//frame, ok := queryCtx.dataFrames[hash]

@@ -2,6 +2,7 @@ package pquerier
 
 import (
 	"fmt"
+	"github.com/v3io/v3io-tsdb/pkg/utils"
 	"strings"
 
 	"github.com/v3io/frames"
@@ -16,6 +17,9 @@ type qryResults struct {
 	name     string
 	fields   map[string]interface{}
 	encoding chunkenc.Encoding
+
+	hash uint64
+	lset utils.Labels
 }
 
 func (q *qryResults) IsRawQuery() bool { return q.frame.isRawSeries }
