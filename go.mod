@@ -35,4 +35,4 @@ replace (
 	launchpad.net/gocheck => github.com/go-check/check v0.0.0-20180628173108-788fd78401277ebd861206a03c884797c6ec5541
 )
 
-replace github.com/v3io/v3io-go => github.com/talIguaz/v3io-go v0.0.0-20190306105200-85098aa0945b7a9912b4fce921f2feca23075704
+replace github.com/v3io/v3io-go => github.com/talIguaz/v3io-go v0.0.0-20190306105200-33c310175d451c3c2d6b7d19fc3253b0bcad48e9

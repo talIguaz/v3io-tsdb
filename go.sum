@@ -84,8 +84,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
-github.com/talIguaz/v3io-go v0.0.0-20190306105200-85098aa0945b7a9912b4fce921f2feca23075704 h1:bDp2pMh3V96FlLNbxtskcG+muQbJTulMHq0K2J770PM=
-github.com/talIguaz/v3io-go v0.0.0-20190306105200-85098aa0945b7a9912b4fce921f2feca23075704/go.mod h1:IFb6dJiyvJnOjXUoCoPJ5UViaYjgVYmqJb4fD1qDeLk=
+github.com/talIguaz/v3io-go v0.0.0-20190306105200-33c310175d451c3c2d6b7d19fc3253b0bcad48e9 h1:lXHTY0MyQmtHAwXhHjhxjpBAjEHECsofqnKetQPCdKY=
+github.com/talIguaz/v3io-go v0.0.0-20190306105200-33c310175d451c3c2d6b7d19fc3253b0bcad48e9/go.mod h1:IFb6dJiyvJnOjXUoCoPJ5UViaYjgVYmqJb4fD1qDeLk=
 github.com/tinylib/msgp v1.1.0 h1:9fQd+ICuRIu/ue4vxJZu6/LzxN0HwMds2nq/0cFvxHU=
 github.com/tinylib/msgp v1.1.0/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/v3io/frames v0.0.0-20190328123118-1dad1ff610509e7b087d9cd390ed1b452caecf15 h1:Y/ABiIlS3tqLHsj0DZkkpMyvdoCmU1nwgQ0On6n6imk=
