@@ -82,6 +82,7 @@ func NewAsyncItemsCursor(container v3io.Container, input *v3io.GetItemsInput, wo
 				AttributeNames: input.AttributeNames,
 				Filter:         input.Filter,
 				ShardingKey:    shardingKeys[i],
+				Segment:        newAsyncItemsCursor.Id,
 			}
 			_, err := container.GetItems(&input, &input, newAsyncItemsCursor.responseChan)
 
