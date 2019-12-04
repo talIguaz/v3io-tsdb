@@ -64,28 +64,6 @@ func mainCollector(ctx *selectQueryContext, responseChannel chan *qryResults) {
 	lastValuePerMetric := make(map[uint64]float64, len(ctx.columnsSpecByMetric))
 
 	for res := range responseChannel {
-
-		// find or create data frame
-		frame, ok := ctx.dataFrames[res.hash]
-		if !ok {
-			var err error
-			frame, err = NewDataFrame(ctx.columnsSpec,
-				ctx.getOrCreateTimeColumn(),
-				res.lset,
-				res.hash,
-				ctx.isRawQuery(),
-				ctx.getResultBucketsSize(),
-				res.IsServerAggregates(),
-				ctx.showAggregateLabel)
-			if err != nil {
-				//return err
-			}
-			ctx.dataFrames[res.hash] = frame
-			ctx.frameList = append(ctx.frameList, frame)
-		}
-
-		res.frame = frame
-
 		if res.IsRawQuery() {
 			rawCollector(ctx, res)
 		} else {
