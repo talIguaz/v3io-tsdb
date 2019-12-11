@@ -165,13 +165,11 @@ func (ic *AsyncItemsCursor) NextItem() (v3io.Item, error) {
 }
 
 func (ic *AsyncItemsCursor) processResponse() error {
-	startTime := time.Now()
 	// Read response from channel
 	resp := <-ic.responseChan
-	endTime := time.Now()
+
 	defer resp.Release()
 
-	ic.logger.Info("%v - waited for get items for %v", ic.Id, endTime.Sub(startTime))
 	// Ignore 404s
 	if e, hasErrorCode := resp.Error.(v3ioerrors.ErrorWithStatusCode); hasErrorCode && e.StatusCode() == http.StatusNotFound {
 		ic.logger.Debug("Got 404 - error: %v, request: %v", resp.Error, resp.Request().Input)

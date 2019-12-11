@@ -48,7 +48,6 @@ type selectQueryContext struct {
 
 func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *SelectParams) (*frameIterator, error) {
 	queryCtx.logger.Info("selectQueryContext.start")
-	startTime := time.Now()
 	queryCtx.dataFrames = make(map[uint64]*dataFrame)
 
 	queryCtx.queryParams = params
@@ -67,7 +66,6 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 	// We query every partition for every requested metric
 	queries := make([]*partQuery, len(parts)*len(queryCtx.columnsSpecByMetric))
 
-	beforeQuery := time.Now()
 	var queryIndex int
 	for _, part := range parts {
 		currQueries, err := queryCtx.queryPartition(part)
@@ -80,13 +78,10 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 		}
 	}
 
-	startingGoRoutines := time.Now()
 	err = queryCtx.startCollectors()
 	if err != nil {
 		return nil, err
 	}
-	id := time.Now().Nanosecond()
-	readingResults := time.Now()
 
 	for _, query := range queries {
 		err = queryCtx.processQueryResults(query)
@@ -95,7 +90,6 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 		}
 	}
 
-	processResults := time.Now()
 	for i := 0; i < queryCtx.workers; i++ {
 		close(queryCtx.requestChannels[i])
 	}
@@ -104,7 +98,6 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 	queryCtx.wg.Wait()
 	close(queryCtx.errorChannel)
 
-	finishedProcess := time.Now()
 	// return first error
 	err = <-queryCtx.errorChannel
 	if err != nil {
@@ -115,10 +108,6 @@ func (queryCtx *selectQueryContext) start(parts []*partmgr.DBPartition, params *
 		queryCtx.totalColumns = queryCtx.frameList[0].Len()
 	}
 
-	endTime := time.Now()
-	queryCtx.logger.Info("%v - send queries took %v, starting collectors: %v, reading getitems: %v, waiting for goroutines to finish: %v total: %v",
-		id, startingGoRoutines.Sub(beforeQuery), readingResults.Sub(startingGoRoutines),
-		processResults.Sub(readingResults), finishedProcess.Sub(processResults), endTime.Sub(startTime))
 	return NewFrameIterator(queryCtx)
 }
 
@@ -291,7 +280,6 @@ func (queryCtx *selectQueryContext) startCollectors() error {
 
 func (queryCtx *selectQueryContext) processQueryResults(query *partQuery) error {
 	for query.Next() {
-
 		// read metric name
 		name, ok := query.GetField(config.MetricNameAttrName).(string)
 		if !ok {
@@ -348,6 +336,9 @@ func (queryCtx *selectQueryContext) processQueryResults(query *partQuery) error 
 		} else {
 			hash = lset.Hash()
 		}
+
+		results.hash = hash
+		results.lset = lset
 
 		// find or create data frame
 		frame, ok := queryCtx.dataFrames[hash]
