@@ -20,6 +20,9 @@ func (f textFormatter) Write(out io.Writer, set utils.SeriesSet) error {
 
 	for set.Next() {
 		series := set.At()
+		if series == nil {
+			continue
+		}
 		name, lbls := labelsToStr(series.Labels())
 		fmt.Fprintf(out, "Name: %s  Labels: %s\n", name, lbls)
 		iter := series.Iterator()
