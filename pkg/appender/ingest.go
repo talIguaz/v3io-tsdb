@@ -61,7 +61,10 @@ func (mc *MetricsCache) metricFeed(index int) {
 				// If data was sent and the queue is empty, mark as completion
 				if length == 0 && gotData {
 					gotCompletion = true
+
+					mc.logger.Info("%v - UpdatesCompletion checking if completeChan is nil", mc.id)
 					if completeChan != nil {
+						mc.logger.Info("%v - UpdatesCompletion going to mark as completed", mc.id)
 						completeChan <- 0
 						gotData = false
 					}
@@ -72,12 +75,15 @@ func (mc *MetricsCache) metricFeed(index int) {
 				numPushed := 0
 			inLoop:
 				for i := 0; i <= mc.cfg.BatchSize; i++ {
+					mc.logger.Info("%v - AsyncAppendChan got an append", mc.id)
 					if app.metric == nil {
+						mc.logger.Info("%v - AsyncAppendChan got completionChan", mc.id)
 						// Handle update completion requests (metric == nil)
 						completeChan = app.resp
 
 						length := mc.metricQueue.Length()
 						if gotCompletion && length == 0 {
+							mc.logger.Info("%v - signaling completionChan", mc.id)
 							completeChan <- 0
 							gotCompletion = false
 							gotData = false

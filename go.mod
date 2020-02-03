@@ -6,6 +6,7 @@ require (
 	github.com/cespare/xxhash v1.1.0
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
 	github.com/ghodss/yaml v1.0.0
+	github.com/google/uuid v1.1.1 // indirect
 	github.com/imdario/mergo v0.3.7
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/nuclio/logger v0.0.1

@@ -25,6 +25,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nuclio/logger"
 	"github.com/pkg/errors"
 	"github.com/v3io/v3io-go/pkg/dataplane"
@@ -130,12 +131,14 @@ type MetricsCache struct {
 
 	lastError           error
 	performanceReporter *performance.MetricReporter
+
+	id uuid.UUID
 }
 
 func NewMetricsCache(container v3io.Container, logger logger.Logger, cfg *config.V3ioConfig,
 	partMngr *partmgr.PartitionManager) *MetricsCache {
 
-	newCache := MetricsCache{container: container, logger: logger, cfg: cfg, partitionMngr: partMngr}
+	newCache := MetricsCache{container: container, logger: logger, cfg: cfg, partitionMngr: partMngr, id: uuid.New()}
 	newCache.cacheMetricMap = map[cacheKey]*MetricState{}
 	newCache.cacheRefMap = map[uint64]*MetricState{}
 
@@ -288,6 +291,7 @@ func verifyTimeValid(t int64) error {
 
 func (mc *MetricsCache) WaitForCompletion(timeout time.Duration) (int, error) {
 	waitChan := make(chan int, 2)
+	mc.logger.Info("%v - sending empty asyncAppend with wait chan", mc.id)
 	mc.asyncAppendChan <- &asyncAppend{metric: nil, t: 0, v: 0, resp: waitChan}
 
 	var maxWaitTime time.Duration = 0
@@ -307,10 +311,12 @@ func (mc *MetricsCache) WaitForCompletion(timeout time.Duration) (int, error) {
 	mc.performanceReporter.WithTimer("WaitForCompletionTimer", func() {
 		select {
 		case resultCount = <-waitChan:
+			mc.logger.Info("%v - got signal from waitChan", mc.id)
 			err = mc.lastError
 			mc.lastError = nil
 			return
 		case <-time.After(maxWaitTime):
+			mc.logger.Info("%v - got timeout on waitForCompletion", mc.id)
 			resultCount = 0
 			err = errors.Errorf("The operation timed out after %.2f seconds.", maxWaitTime.Seconds())
 			return
