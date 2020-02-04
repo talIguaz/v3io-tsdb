@@ -310,7 +310,8 @@ func (mc *MetricsCache) WaitForCompletion(timeout time.Duration) (int, error) {
 			err = mc.lastError
 			mc.lastError = nil
 			return
-		case <-time.After(maxWaitTime):
+		case <-time.After(10 * time.Second):
+			panic("ahhahahahahahahahaha")
 			resultCount = 0
 			err = errors.Errorf("The operation timed out after %.2f seconds.", maxWaitTime.Seconds())
 			return
