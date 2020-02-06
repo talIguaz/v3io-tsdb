@@ -107,7 +107,6 @@ func newSchema(samplesIngestionRate, aggregationGranularity, aggregatesList stri
 	schema := &config.Schema{
 		TableSchemaInfo:     tableSchema,
 		PartitionSchemaInfo: partitionSchema,
-		Partitions:          []*config.Partition{},
 		Fields:              fields,
 	}
 

@@ -85,7 +85,6 @@ func getPartitionManager(tst *testing.T) *PartitionManager {
 
 func TestNewPartitionMngrBadInput(t *testing.T) {
 	schemaConfig := &config.Schema{
-		Partitions: []*config.Partition{{}},
 		PartitionSchemaInfo: config.PartitionSchema{
 			AggregationGranularity: "boo",
 		},

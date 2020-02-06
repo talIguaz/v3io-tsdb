@@ -236,7 +236,6 @@ type SchemaField struct {
 type Schema struct {
 	TableSchemaInfo     TableSchema     `json:"tableSchemaInfo"`
 	PartitionSchemaInfo PartitionSchema `json:"partitionSchemaInfo"`
-	Partitions          []*Partition    `json:"partitions"`
 	Fields              []SchemaField   `json:"fields"`
 }
 

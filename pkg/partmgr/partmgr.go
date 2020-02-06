@@ -144,11 +144,9 @@ func (p *PartitionManager) createAndUpdatePartition(t int64) (*DBPartition, erro
 	}
 	p.currentPartitionInterval = partition.partitionInterval
 
-	schemaPartition := &config.Partition{StartTime: partition.startTime, SchemaInfo: p.schemaConfig.PartitionSchemaInfo}
 	if p.headPartition == nil || time > p.headPartition.startTime {
 		p.headPartition = partition
 		p.partitions = append(p.partitions, partition)
-		p.schemaConfig.Partitions = append(p.schemaConfig.Partitions, schemaPartition)
 	} else {
 		for i, part := range p.partitions {
 			if part.startTime > time {
@@ -156,9 +154,6 @@ func (p *PartitionManager) createAndUpdatePartition(t int64) (*DBPartition, erro
 				copy(p.partitions[i+1:], p.partitions[i:])
 				p.partitions[i] = partition
 
-				p.schemaConfig.Partitions = append(p.schemaConfig.Partitions, nil)
-				copy(p.schemaConfig.Partitions[i+1:], p.schemaConfig.Partitions[i:])
-				p.schemaConfig.Partitions[i] = schemaPartition
 				break
 			}
 		}
@@ -219,14 +214,6 @@ func (p *PartitionManager) DeletePartitionsFromSchema(partitionsToDelete []*DBPa
 			}
 		}
 
-	}
-	for i := len(p.schemaConfig.Partitions) - 1; i >= 0; i-- {
-		for _, partToDelete := range partitionsToDelete {
-			if p.schemaConfig.Partitions[i].StartTime == partToDelete.startTime {
-				p.schemaConfig.Partitions = append(p.schemaConfig.Partitions[:i], p.schemaConfig.Partitions[i+1:]...)
-				break
-			}
-		}
 	}
 
 	// Delete from partitions KV table
@@ -291,50 +278,7 @@ func (p *PartitionManager) ReadAndUpdateSchema() (err error) {
 }
 
 func (p *PartitionManager) updatePartitionsFromSchema(schemaConfig *config.Schema, schemaGetItemResponse *v3io.GetItemOutput) error {
-	var currentSchemaVersion int
-	if schemaConfig == nil {
-		currentSchemaVersion = p.schemaConfig.TableSchemaInfo.Version
-	} else {
-		currentSchemaVersion = schemaConfig.TableSchemaInfo.Version
-	}
-
-	if currentSchemaVersion == 4 && p.v3ioConfig.LoadPartitionsFromSchemaAttr {
-		return p.newLoadPartitions(schemaGetItemResponse)
-	}
-
-	return p.oldLoadPartitions(schemaConfig)
-}
-
-func (p *PartitionManager) oldLoadPartitions(schema *config.Schema) error {
-	if schema == nil {
-		schemaFilePath := p.GetSchemaFilePath()
-		resp, innerError := p.container.GetObjectSync(&v3io.GetObjectInput{Path: schemaFilePath})
-		if innerError != nil {
-			return errors.Wrapf(innerError, "Failed to read schema at path '%s'.", schemaFilePath)
-		}
-
-		schema = &config.Schema{}
-		innerError = json.Unmarshal(resp.Body(), schema)
-		if innerError != nil {
-			return errors.Wrapf(innerError, "Failed to unmarshal schema at path '%s'.", schemaFilePath)
-		}
-	}
-
-	p.partitions = []*DBPartition{}
-	for _, part := range schema.Partitions {
-		partPath := path.Join(p.Path(), strconv.FormatInt(part.StartTime/1000, 10)) + "/"
-		newPart, err := NewDBPartition(p, part.StartTime, partPath)
-		if err != nil {
-			return err
-		}
-		p.partitions = append(p.partitions, newPart)
-		if p.headPartition == nil {
-			p.headPartition = newPart
-		} else if p.headPartition.startTime < newPart.startTime {
-			p.headPartition = newPart
-		}
-	}
-	return nil
+	return p.newLoadPartitions(schemaGetItemResponse)
 }
 
 func (p *PartitionManager) newLoadPartitions(schemaAttributesResponse *v3io.GetItemOutput) error {

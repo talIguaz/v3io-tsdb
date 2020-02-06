@@ -173,45 +173,45 @@ func (cc *checkCommandeer) checkByPath(container v3io.Container, tablePath strin
 
 func (cc *checkCommandeer) checkByName(container v3io.Container, tablePath string) ([]chan *v3io.Response, error) {
 
-	var err error
+	//var err error
 
-	schema, err := getSchema(cc.rootCommandeer.v3iocfg, container)
-	if err != nil {
-		return nil, err
-	}
-	numBuckets := schema.TableSchemaInfo.ShardingBucketsCount
-	hash := cc.labels.Hash()
-	var from, to int64
-	if cc.from == "" {
-		from = 0
-	} else {
-		from, err = utils.Str2unixTime(cc.from)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse start time '%s'", cc.from)
-		}
-	}
-	if cc.to == "" {
-		to = math.MaxInt64
-	} else {
-		to, err = utils.Str2unixTime(cc.to)
-		return nil, errors.Wrapf(err, "failed to parse end time '%s'", cc.to)
-	}
-	partitionInterval, _ := utils.Str2duration(schema.PartitionSchemaInfo.PartitionerInterval)
+	//schema, err := getSchema(cc.rootCommandeer.v3iocfg, container)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//numBuckets := schema.TableSchemaInfo.ShardingBucketsCount
+	//hash := cc.labels.Hash()
+	//var from, to int64
+	//if cc.from == "" {
+	//	from = 0
+	//} else {
+	//	from, err = utils.Str2unixTime(cc.from)
+	//	if err != nil {
+	//		return nil, errors.Wrapf(err, "failed to parse start time '%s'", cc.from)
+	//	}
+	//}
+	//if cc.to == "" {
+	//	to = math.MaxInt64
+	//} else {
+	//	to, err = utils.Str2unixTime(cc.to)
+	//	return nil, errors.Wrapf(err, "failed to parse end time '%s'", cc.to)
+	//}
+	//partitionInterval, _ := utils.Str2duration(schema.PartitionSchemaInfo.PartitionerInterval)
 	var respChans []chan *v3io.Response
-	for _, partition := range schema.Partitions {
-		partitionEndTime := partition.StartTime + partitionInterval
-		if partitionEndTime >= from && partition.StartTime <= to {
-			respChan := make(chan *v3io.Response, 1)
-			respChans = append(respChans, respChan)
-			objName := fmt.Sprintf("%s_%d.%x", cc.metricName, hash%uint64(numBuckets), hash)
-			objPath := path.Join(tablePath, strconv.FormatInt(partition.StartTime/1000, 10), objName)
-			input := v3io.GetItemInput{Path: objPath, AttributeNames: []string{"**"}}
-			_, err := container.GetItem(&input, nil, respChan)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to send GetItem request")
-			}
-		}
-	}
+	//for _, partition := range schema.Partitions {
+	//	partitionEndTime := partition.StartTime + partitionInterval
+	//	if partitionEndTime >= from && partition.StartTime <= to {
+	//		respChan := make(chan *v3io.Response, 1)
+	//		respChans = append(respChans, respChan)
+	//		objName := fmt.Sprintf("%s_%d.%x", cc.metricName, hash%uint64(numBuckets), hash)
+	//		objPath := path.Join(tablePath, strconv.FormatInt(partition.StartTime/1000, 10), objName)
+	//		input := v3io.GetItemInput{Path: objPath, AttributeNames: []string{"**"}}
+	//		_, err := container.GetItem(&input, nil, respChan)
+	//		if err != nil {
+	//			return nil, errors.Wrap(err, "failed to send GetItem request")
+	//		}
+	//	}
+	//}
 	return respChans, nil
 }
 
