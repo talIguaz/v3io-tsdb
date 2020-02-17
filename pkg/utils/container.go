@@ -63,7 +63,7 @@ func CreateContainer(logger logger.Logger, cfg *config.V3ioConfig, httpTimeout t
 		return nil, err
 	}
 
-	newClient := v3iohttp.NewClient(nil, httpTimeout)
+	newClient := v3iohttp.NewClient(&v3iohttp.NewClientInput{DialTimeout: httpTimeout})
 	newContextInput := &v3io.NewContextInput{
 		NumWorkers: cfg.Workers,
 	}
