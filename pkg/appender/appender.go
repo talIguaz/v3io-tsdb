@@ -134,6 +134,8 @@ type MetricsCache struct {
 	performanceReporter *performance.MetricReporter
 
 	stopChan chan int
+
+	numAppend int
 }
 
 func NewMetricsCache(container v3io.Container, logger logger.Logger, cfg *config.V3ioConfig,

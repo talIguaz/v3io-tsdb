@@ -32,13 +32,6 @@ import (
 	"github.com/v3io/v3io-tsdb/pkg/utils"
 )
 
-var (
-	numAppend = 0
-	numOmits = 0
-	numPendings = 0
-	numAggregated = 0
-	numIngested = 0
-)
 // Start event loops for handling metric updates (appends and Get/Update DB responses)
 // TODO: we can use multiple Go routines and spread the metrics across based on Hash LSB.
 func (mc *MetricsCache) start() error {
@@ -53,11 +46,7 @@ func (mc *MetricsCache) start() error {
 func (mc *MetricsCache) printMetrics(){
 	mc.logger.WarnWith("finishing",
 		"table", mc.cfg.TablePath,
-		"num-appends", numAppend,
-		"num-omits", numOmits,
-		"num-pendings", numPendings,
-		"num-ingested", numIngested,
-		"num-aggregated", numAggregated)
+		"num-appends", mc.numAppend)
 }
 
 // Read data from the append queue, push it into per-metric queues, and manage ingestion states
@@ -115,7 +104,7 @@ func (mc *MetricsCache) metricFeed(index int) {
 						potentialCompletion = false
 					} else {
 						potentialCompletion = false
-						numAppend++
+						mc.numAppend++
 						// Handle append requests (Add / AddFast)
 						gotData = true
 						metric := app.metric

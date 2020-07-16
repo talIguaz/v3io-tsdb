@@ -316,6 +316,11 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 		var pendingSampleIndex int
 		var pendingSamplesCount int
 
+		numPendings := 0
+		numAggregated := 0
+		var omittedTimes []int64
+		var ingestedTimes []int64
+
 		// Loop over pending samples, add to chunks & aggregates (create required update expressions)
 		for pendingSampleIndex < len(cs.pending) && pendingSamplesCount < mc.cfg.BatchSize && partition.InRange(cs.pending[pendingSampleIndex].t) {
 			numPendings++
@@ -323,7 +328,7 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 
 			if sampleTime <= cs.maxTime && !mc.cfg.OverrideOld {
 				mc.logger.Debug("Omitting the sample - time is earlier than the last sample time for this metric", "metric", metric.Lset, "T", sampleTime)
-				numOmits++
+				omittedTimes = append(omittedTimes, sampleTime)
 				// If we have reached the end of the pending events and there are events to update, create an update expression and break from loop,
 				// Otherwise, discard the event and continue normally
 				if pendingSampleIndex == len(cs.pending)-1 {
@@ -366,7 +371,7 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 			if activeChunk != nil {
 				// Add a value to the compressed raw-values chunk
 				activeChunk.appendAttr(sampleTime, cs.pending[pendingSampleIndex].v)
-				numIngested++
+				ingestedTimes = append(ingestedTimes, sampleTime)
 			}
 
 			// If this is the last item or last item in the same partition, add
@@ -415,9 +420,11 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 
 		if pendingSamplesCount == 0 || expr == "" {
 			if len(cs.pending) > 0 {
+				mc.logger.Warn("pushed metric")
 				mc.metricQueue.Push(metric)
 			}
 			hasPendingUpdates = false
+			mc.logger.Warn("returning cause no items")
 			return
 		}
 
@@ -461,6 +468,18 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 
 		hasPendingUpdates = true
 		cs.performanceReporter.UpdateHistogram("WriteChunksSizeHistogram", int64(pendingSamplesCount))
+
+		_,_,hash := metric.Lset.GetKey()
+		mc.logger.WarnWith("wrote chunks",
+			"table", mc.cfg.TablePath,
+			"labels", hash,
+			"num-omits", len(omittedTimes),
+			//"omits", omittedTimes,
+			"num-pendings", numPendings,
+			"num-ingested", len(ingestedTimes),
+			//"ingested", ingestedTimes,
+			"num-aggregated", numAggregated)
+
 		return
 	})
 
