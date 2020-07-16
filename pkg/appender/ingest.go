@@ -32,6 +32,13 @@ import (
 	"github.com/v3io/v3io-tsdb/pkg/utils"
 )
 
+var (
+	numAppend = 0
+	numOmits = 0
+	numPendings = 0
+	numAggregated = 0
+	numIngested = 0
+)
 // Start event loops for handling metric updates (appends and Get/Update DB responses)
 // TODO: we can use multiple Go routines and spread the metrics across based on Hash LSB.
 func (mc *MetricsCache) start() error {
@@ -41,6 +48,22 @@ func (mc *MetricsCache) start() error {
 	mc.metricFeed(0)
 
 	return nil
+}
+
+func (mc *MetricsCache) printMetrics(){
+	mc.logger.WarnWith("finishing",
+		"table", mc.cfg.TablePath,
+		"num-appends", numAppend,
+		"num-omits", numOmits,
+		"num-pendings", numPendings,
+		"num-ingested", numIngested,
+		"num-aggregated", numAggregated)
+
+	numAppend = 0
+	numOmits = 0
+	numPendings = 0
+	numAggregated = 0
+	numIngested = 0
 }
 
 // Read data from the append queue, push it into per-metric queues, and manage ingestion states
@@ -68,6 +91,7 @@ func (mc *MetricsCache) metricFeed(index int) {
 						gotCompletion = true
 						if completeChan != nil {
 							completeChan <- 0
+							mc.printMetrics()
 							gotData = false
 							potentialCompletion = false
 						}
@@ -88,6 +112,8 @@ func (mc *MetricsCache) metricFeed(index int) {
 						if length == 0 && len(mc.asyncAppendChan) == 0 {
 							if gotCompletion || (potentialCompletion && gotData) {
 								completeChan <- 0
+								mc.printMetrics()
+
 								gotCompletion = false
 								gotData = false
 							}
@@ -95,6 +121,7 @@ func (mc *MetricsCache) metricFeed(index int) {
 						potentialCompletion = false
 					} else {
 						potentialCompletion = false
+						numAppend++
 						// Handle append requests (Add / AddFast)
 						gotData = true
 						metric := app.metric

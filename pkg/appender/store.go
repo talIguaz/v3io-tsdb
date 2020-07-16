@@ -318,11 +318,12 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 
 		// Loop over pending samples, add to chunks & aggregates (create required update expressions)
 		for pendingSampleIndex < len(cs.pending) && pendingSamplesCount < mc.cfg.BatchSize && partition.InRange(cs.pending[pendingSampleIndex].t) {
+			numPendings++
 			sampleTime := cs.pending[pendingSampleIndex].t
 
 			if sampleTime <= cs.maxTime && !mc.cfg.OverrideOld {
-				mc.logger.WarnWith("Omitting the sample - time is earlier than the last sample time for this metric", "metric", metric.Lset, "T", sampleTime)
-
+				mc.logger.Debug("Omitting the sample - time is earlier than the last sample time for this metric", "metric", metric.Lset, "T", sampleTime)
+				numOmits++
 				// If we have reached the end of the pending events and there are events to update, create an update expression and break from loop,
 				// Otherwise, discard the event and continue normally
 				if pendingSampleIndex == len(cs.pending)-1 {
@@ -360,10 +361,12 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 
 			// Add a value to the aggregates list
 			cs.aggrList.Aggregate(sampleTime, cs.pending[pendingSampleIndex].v)
+			numAggregated++
 
 			if activeChunk != nil {
 				// Add a value to the compressed raw-values chunk
 				activeChunk.appendAttr(sampleTime, cs.pending[pendingSampleIndex].v)
+				numIngested++
 			}
 
 			// If this is the last item or last item in the same partition, add
