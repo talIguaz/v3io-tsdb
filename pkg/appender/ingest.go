@@ -58,12 +58,6 @@ func (mc *MetricsCache) printMetrics(){
 		"num-pendings", numPendings,
 		"num-ingested", numIngested,
 		"num-aggregated", numAggregated)
-
-	numAppend = 0
-	numOmits = 0
-	numPendings = 0
-	numAggregated = 0
-	numIngested = 0
 }
 
 // Read data from the append queue, push it into per-metric queues, and manage ingestion states
