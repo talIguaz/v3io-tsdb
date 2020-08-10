@@ -484,6 +484,8 @@ func (d *dataFrame) rawSeriesToColumns() error {
 	d.nullValuesMaps = make([]*pb.NullValuesMap, 0)
 	nullValuesRowIndex := -1
 
+	l, _ := utils.NewLogger("debug")
+	talIndex := 0
 	for i, rawSeries := range d.rawColumns {
 		if rawSeries == nil {
 			missingColumn := "(unknown column)"
@@ -548,6 +550,7 @@ func (d *dataFrame) rawSeriesToColumns() error {
 			} else {
 				t, v = iter.At()
 			}
+			talIndex++
 
 			if t == currentTime {
 				e := columns[seriesIndex].Append(v)
@@ -618,6 +621,9 @@ func (d *dataFrame) rawSeriesToColumns() error {
 		}
 	}
 
+	l.WarnWith("finished creating DF", "is equal", talIndex/4 == d.columns[0].Len(),
+		"total", talIndex, "total /4", talIndex/4,
+		"frame len", d.columns[0].Len())
 	d.isRawColumnsGenerated = true
 
 	return nil
