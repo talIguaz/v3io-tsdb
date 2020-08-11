@@ -150,6 +150,7 @@ func (mc *MetricsCache) metricsUpdateLoop(index int) {
 					freeSlots := mc.cfg.Workers*2 - mc.updatesInFlight
 					metrics := mc.metricQueue.PopN(freeSlots)
 					for _, metric := range metrics {
+						mc.logger.WarnWith("posting metric updates A")
 						mc.postMetricUpdates(metric)
 					}
 					if len(metrics) < freeSlots {
@@ -197,6 +198,7 @@ func (mc *MetricsCache) metricsUpdateLoop(index int) {
 						break
 					}
 					for _, metric := range metrics {
+						mc.logger.WarnWith("posting metric updates B")
 						mc.postMetricUpdates(metric)
 					}
 				}
@@ -269,6 +271,10 @@ func (mc *MetricsCache) sendGetMetricState(metric *MetricState) bool {
 		"name", name,
 		"state", metric.getState())
 
+	// If we are already in a get state, discard
+	if metric.getState() == storeStateGet {
+		return false
+	}
 	sent, err := metric.store.getChunksState(mc, metric)
 	if err != nil {
 		// Count errors
