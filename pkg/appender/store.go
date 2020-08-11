@@ -472,7 +472,8 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 			"path", path,
 			"label", key,
 			"name", name,
-			"should get state", metric.shouldGetState)
+			"should get state", metric.shouldGetState,
+			"expr", expr)
 
 		// Add the async request ID to the requests map (can be avoided if V3IO
 		// will add user data in request)
