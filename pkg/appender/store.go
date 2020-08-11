@@ -406,6 +406,10 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 
 		// In case we advanced to a newer partition mark we need to get state again
 		if pendingSampleIndex < len(cs.pending) && !partition.InRange(cs.pending[pendingSampleIndex].t) {
+			name, key, _ := metric.Lset.GetKey()
+			mc.logger.WarnWith(" -----> setting should get state for",
+				"label", key,
+				"name", name)
 			metric.shouldGetState = true
 		}
 

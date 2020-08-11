@@ -222,6 +222,13 @@ func (mc *MetricsCache) postMetricUpdates(metric *MetricState) {
 	var sent bool
 	var err error
 
+	name, key, _ := metric.Lset.GetKey()
+	mc.logger.WarnWith(" -----> got post metric updates",
+		"label", key,
+		"name", name,
+		"state", metric.state,
+		"should get state", metric.shouldGetState)
+
 	// In case we are in pre get state or our data spreads across multiple partitions, get the new state for the current partition
 	if metric.getState() == storeStatePreGet || metric.shouldGetState {
 		sent = mc.sendGetMetricState(metric)
@@ -254,6 +261,12 @@ func (mc *MetricsCache) postMetricUpdates(metric *MetricState) {
 }
 
 func (mc *MetricsCache) sendGetMetricState(metric *MetricState) bool {
+	name, key, _ := metric.Lset.GetKey()
+	mc.logger.WarnWith(" -----> sending get state",
+		"label", key,
+		"name", name,
+		"state", metric.getState())
+
 	sent, err := metric.store.getChunksState(mc, metric)
 	if err != nil {
 		// Count errors
@@ -275,6 +288,13 @@ func (mc *MetricsCache) handleResponse(metric *MetricState, resp *v3io.Response,
 	metric.Lock()
 	defer metric.Unlock()
 
+	name, key, _ := metric.Lset.GetKey()
+	mc.logger.WarnWith(" -----> got handle response",
+		"label", key,
+		"name", name,
+		"state", metric.state,
+		"should get state", metric.shouldGetState)
+
 	reqInput := resp.Request().Input
 
 	if resp.Error != nil && metric.getState() != storeStateGet {
@@ -283,7 +303,7 @@ func (mc *MetricsCache) handleResponse(metric *MetricState, resp *v3io.Response,
 			"in-flight", mc.updatesInFlight, "mqueue", mc.metricQueue.Length(),
 			"numsamples", metric.store.samplesQueueLength(),
 			"input", reqInput)
-			//"path", req.Path, "update expression", req.Expression)
+		//"path", req.Path, "update expression", req.Expression)
 	} else {
 		mc.logger.DebugWith("I/O response", "id", resp.ID, "err", resp.Error, "key", metric.key, "request type",
 			reflect.TypeOf(reqInput), "request", reqInput)
