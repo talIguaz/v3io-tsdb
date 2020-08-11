@@ -278,10 +278,12 @@ func (mc *MetricsCache) handleResponse(metric *MetricState, resp *v3io.Response,
 	reqInput := resp.Request().Input
 
 	if resp.Error != nil && metric.getState() != storeStateGet {
-		req := reqInput.(*v3io.UpdateItemInput)
+		//req := reqInput.(*v3io.UpdateItemInput)
 		mc.logger.DebugWith("I/O failure", "id", resp.ID, "err", resp.Error, "key", metric.key,
 			"in-flight", mc.updatesInFlight, "mqueue", mc.metricQueue.Length(),
-			"numsamples", metric.store.samplesQueueLength(), "path", req.Path, "update expression", req.Expression)
+			"numsamples", metric.store.samplesQueueLength(),
+			"input", reqInput)
+			//"path", req.Path, "update expression", req.Expression)
 	} else {
 		mc.logger.DebugWith("I/O response", "id", resp.ID, "err", resp.Error, "key", metric.key, "request type",
 			reflect.TypeOf(reqInput), "request", reqInput)
