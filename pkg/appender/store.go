@@ -409,7 +409,8 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 			name, key, _ := metric.Lset.GetKey()
 			mc.logger.WarnWith(" -----> setting should get state for",
 				"label", key,
-				"name", name)
+				"name", name,
+				"path", mc.partitionMngr.Path())
 			metric.shouldGetState = true
 		}
 
@@ -464,6 +465,14 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 			mc.logger.ErrorWith("UpdateItem failed", "err", err)
 			hasPendingUpdates = false
 		}
+
+
+		name, key, _ := metric.Lset.GetKey()
+		mc.logger.WarnWith(" -----> sent update item",
+			"path", path,
+			"label", key,
+			"name", name,
+			"should get state", metric.shouldGetState)
 
 		// Add the async request ID to the requests map (can be avoided if V3IO
 		// will add user data in request)

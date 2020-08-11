@@ -224,6 +224,7 @@ func (mc *MetricsCache) postMetricUpdates(metric *MetricState) {
 
 	name, key, _ := metric.Lset.GetKey()
 	mc.logger.WarnWith(" -----> got post metric updates",
+		"path", mc.partitionMngr.Path(),
 		"label", key,
 		"name", name,
 		"state", metric.state,
@@ -263,6 +264,7 @@ func (mc *MetricsCache) postMetricUpdates(metric *MetricState) {
 func (mc *MetricsCache) sendGetMetricState(metric *MetricState) bool {
 	name, key, _ := metric.Lset.GetKey()
 	mc.logger.WarnWith(" -----> sending get state",
+		"path", mc.partitionMngr.Path(),
 		"label", key,
 		"name", name,
 		"state", metric.getState())
@@ -290,6 +292,7 @@ func (mc *MetricsCache) handleResponse(metric *MetricState, resp *v3io.Response,
 
 	name, key, _ := metric.Lset.GetKey()
 	mc.logger.WarnWith(" -----> got handle response",
+		"path", mc.partitionMngr.Path(),
 		"label", key,
 		"name", name,
 		"state", metric.state,
