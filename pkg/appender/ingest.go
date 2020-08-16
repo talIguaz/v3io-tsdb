@@ -93,15 +93,15 @@ func (mc *MetricsCache) metricFeed(index int) {
 							if metric.getState() == storeStateInit {
 								metric.setState(storeStatePreGet)
 							}
-							//if metric.isReady() {
-							//	mc.logger.WarnWith("metric feed - setting status to update",
-							//		"lset", metric.hash,
-							//		"state", metric.state,
-							//		"shouldGetState", metric.shouldGetState,
-							//		"name", metric.name,
-							//		"path", mc.partitionMngr.Path())
-							//	metric.setState(storeStateUpdate)
-							//}
+							if metric.isReady() {
+								mc.logger.WarnWith("metric feed - setting status to about to update",
+									"lset", metric.hash,
+									"state", metric.state,
+									"shouldGetState", metric.shouldGetState,
+									"name", metric.name,
+									"path", mc.partitionMngr.Path())
+								metric.setState(storeStateAboutToUpdate)
+							}
 
 							length := mc.metricQueue.Push(metric)
 							if length < 2*mc.cfg.Workers {
@@ -248,7 +248,8 @@ func (mc *MetricsCache) postMetricUpdates(metric *MetricState) {
 		"path", mc.partitionMngr.Path())
 
 	// In case we are in pre get state or our data spreads across multiple partitions, get the new state for the current partition
-	if metric.getState() == storeStatePreGet || (metric.isReady() && metric.shouldGetState) {
+	if metric.getState() == storeStatePreGet ||
+		((metric.isReady() || metric.getState() == storeStateAboutToUpdate) && metric.shouldGetState) {
 		sent = mc.sendGetMetricState(metric)
 	} else {
 		sent, err = metric.store.writeChunks(mc, metric)

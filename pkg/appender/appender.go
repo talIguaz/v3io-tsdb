@@ -67,11 +67,12 @@ type MetricState struct {
 type storeState uint8
 
 const (
-	storeStateInit   storeState = 0
-	storeStatePreGet storeState = 1 // Need to get state
-	storeStateGet    storeState = 2 // Getting old state from storage
-	storeStateReady  storeState = 3 // Ready to update
-	storeStateUpdate storeState = 4 // Update/write in progress
+	storeStateInit          storeState = 0
+	storeStatePreGet        storeState = 1 // Need to get state
+	storeStateGet           storeState = 2 // Getting old state from storage
+	storeStateReady         storeState = 3 // Ready to update
+	storeStateUpdate        storeState = 4 // Update/write in progress
+	storeStateAboutToUpdate storeState = 5 // Like ready state but with updates pending
 )
 
 // store is ready to update samples into the DB
