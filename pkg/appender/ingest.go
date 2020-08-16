@@ -177,7 +177,7 @@ func (mc *MetricsCache) metricsUpdateLoop(index int) {
 				a := atomic.LoadInt64(&mc.requestsInFlight)
 				if a == 0 && outstandingUpdates == 0 {
 					mc.logger.Debug("Return to feed after processing newUpdates")
-					mc.logger.WarnWith("post metric updates from new updates",
+					mc.logger.WarnWith("Return to feed after processing newUpdates",
 						"outstandingUpdates", outstandingUpdates,
 						"requestsInFlight", a)
 					mc.updatesComplete <- 0
@@ -227,14 +227,16 @@ func (mc *MetricsCache) metricsUpdateLoop(index int) {
 				}
 
 				requestsInFlight := atomic.AddInt64(&mc.requestsInFlight, -1)
-
 				a := atomic.LoadInt64(&mc.outstandingUpdates)
+				mc.logger.WarnWith("finished processing from responseChan",
+					"requestsInFlight", requestsInFlight,
+					"outstandingUpdates", a)
 				// Notify the metric feeder when all in-flight tasks are done
 				if requestsInFlight == 0 && a == 0 {
 					mc.logger.Debug("Return to feed after processing responseChan")
 
-					mc.logger.WarnWith("post metric updates from new updates",
-						"outstandingUpdates", requestsInFlight,
+					mc.logger.WarnWith("Return to feed after processing responseChan",
+						"requestsInFlight", requestsInFlight,
 						"outstandingUpdates", a)
 					mc.updatesComplete <- 0
 				}
