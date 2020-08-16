@@ -56,6 +56,10 @@ func (mc *MetricsCache) metricFeed(index int) {
 			case _ = <-mc.stopChan:
 				return
 			case <-mc.updatesComplete: // Handle completion notifications from the update loop
+
+				mc.logger.WarnWith("got updatesCompleted",
+					"len(mc.asyncAppendChan)", len(mc.asyncAppendChan),
+					"has completion chan", completeChan != nil)
 				switch len(mc.asyncAppendChan) {
 				case 0:
 					potentialCompletion = true
@@ -170,9 +174,12 @@ func (mc *MetricsCache) metricsUpdateLoop(index int) {
 				}
 
 				outstandingUpdates := atomic.AddInt64(&mc.outstandingUpdates, -1)
-
-				if atomic.LoadInt64(&mc.requestsInFlight) == 0 && outstandingUpdates == 0 {
+				a := atomic.LoadInt64(&mc.requestsInFlight)
+				if a == 0 && outstandingUpdates == 0 {
 					mc.logger.Debug("Return to feed after processing newUpdates")
+					mc.logger.WarnWith("post metric updates from new updates",
+						"outstandingUpdates", outstandingUpdates,
+						"requestsInFlight", a)
 					mc.updatesComplete <- 0
 				}
 			case resp := <-mc.responseChan:
@@ -221,9 +228,14 @@ func (mc *MetricsCache) metricsUpdateLoop(index int) {
 
 				requestsInFlight := atomic.AddInt64(&mc.requestsInFlight, -1)
 
+				a := atomic.LoadInt64(&mc.outstandingUpdates)
 				// Notify the metric feeder when all in-flight tasks are done
-				if requestsInFlight == 0 && atomic.LoadInt64(&mc.outstandingUpdates) == 0 {
+				if requestsInFlight == 0 && a == 0 {
 					mc.logger.Debug("Return to feed after processing responseChan")
+
+					mc.logger.WarnWith("post metric updates from new updates",
+						"outstandingUpdates", requestsInFlight,
+						"outstandingUpdates", a)
 					mc.updatesComplete <- 0
 				}
 			}
