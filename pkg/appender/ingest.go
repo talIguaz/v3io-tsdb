@@ -91,6 +91,13 @@ func (mc *MetricsCache) metricFeed(index int) {
 						numPushed++
 						dataQueued += metric.store.samplesQueueLength()
 
+						mc.logger.WarnWith("metric feed - reading from asyncAppendChan",
+							"lset", metric.hash,
+							"state", metric.state,
+							"shouldGetState", metric.shouldGetState,
+							"name", metric.name,
+							"path", mc.partitionMngr.Path())
+
 						// If there are no in-flight requests, add the metric to the queue and update state
 						if metric.isReady() || metric.getState() == storeStateInit {
 
@@ -98,12 +105,6 @@ func (mc *MetricsCache) metricFeed(index int) {
 								metric.setState(storeStatePreGet)
 							}
 							if metric.isReady() {
-								mc.logger.WarnWith("metric feed - setting status to about to update",
-									"lset", metric.hash,
-									"state", metric.state,
-									"shouldGetState", metric.shouldGetState,
-									"name", metric.name,
-									"path", mc.partitionMngr.Path())
 								metric.setState(storeStateAboutToUpdate)
 							}
 
