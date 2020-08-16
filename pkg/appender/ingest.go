@@ -278,6 +278,13 @@ func (mc *MetricsCache) sendGetMetricState(metric *MetricState) bool {
 		return false
 	}
 
+	mc.logger.WarnWith("send get metrics state 1",
+		"lset", metric.hash,
+		"state", metric.state,
+		"shouldGetState", metric.shouldGetState,
+		"name", metric.name,
+		"path", mc.partitionMngr.Path())
+
 	sent, err := metric.store.getChunksState(mc, metric)
 	if err != nil {
 		// Count errors
@@ -288,6 +295,14 @@ func (mc *MetricsCache) sendGetMetricState(metric *MetricState) bool {
 	} else {
 		metric.setState(storeStateGet)
 	}
+
+	mc.logger.WarnWith("send get metrics state 2",
+		"lset", metric.hash,
+		"state", metric.state,
+		"shouldGetState", metric.shouldGetState,
+		"name", metric.name,
+		"path", mc.partitionMngr.Path(),
+		"sent", sent)
 
 	return sent
 }

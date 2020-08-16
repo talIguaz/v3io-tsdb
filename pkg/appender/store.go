@@ -288,6 +288,14 @@ func (cs *chunkStore) chunkByTime(t int64, isVariantEncoding bool) (*attrAppende
 // Write all pending samples to DB chunks and aggregates
 func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPendingUpdates bool, err error) {
 	cs.performanceReporter.WithTimer("WriteChunksTimer", func() {
+
+		mc.logger.WarnWith("write chunks",
+			"lset", metric.hash,
+			"state", metric.state,
+			"shouldGetState", metric.shouldGetState,
+			"name", metric.name,
+			"path", mc.partitionMngr.Path())
+
 		// Return if there are no pending updates
 		if len(cs.pending) == 0 {
 			hasPendingUpdates, err = false, nil
