@@ -239,7 +239,7 @@ func (mc *MetricsCache) postMetricUpdates(metric *MetricState) {
 		"state", metric.state,
 		"shouldGetState", metric.shouldGetState,
 		"name", metric.name,
-		"path", mc.partitionMngr.Pathx())
+		"path", mc.partitionMngr.Path())
 
 	// In case we are in pre get state or our data spreads across multiple partitions, get the new state for the current partition
 	if metric.getState() == storeStatePreGet || (metric.isReady() && metric.shouldGetState) {
