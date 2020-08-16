@@ -310,11 +310,13 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 			"state", metric.state,
 			"shouldGetState", metric.shouldGetState,
 			"name", metric.name,
-			"path", mc.partitionMngr.Path())
+			"path", mc.partitionMngr.Path(),
+			"pending", len(cs.pending))
 
 		// Return if there are no pending updates
 		if len(cs.pending) == 0 {
 			hasPendingUpdates, err = false, nil
+			mc.logger.WarnWith("write chunks - return cause no more pending")
 			return
 		}
 
@@ -446,6 +448,8 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 				mc.metricQueue.Push(metric)
 			}
 			hasPendingUpdates = false
+			mc.logger.WarnWith("write chunks - return cause pendingSamplesCount == 0 || expr == \"\" ",
+				"len(cs.pending)", len(cs.pending))
 			return
 		}
 

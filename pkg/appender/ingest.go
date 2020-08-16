@@ -202,7 +202,12 @@ func (mc *MetricsCache) metricsUpdateLoop(index int) {
 					if i < mc.cfg.BatchSize {
 						select {
 						case resp = <-mc.responseChan:
-							atomic.AddInt64(&mc.requestsInFlight, -1)
+							reqInFlight := atomic.AddInt64(&mc.requestsInFlight, -1)
+							mc.logger.WarnWith("there were more responses",
+								"requestsInFlight", reqInFlight,
+								"updates in flight", mc.updatesInFlight,
+								"metricQueue", mc.metricQueue.Length())
+
 						default:
 							break inLoop
 						}
