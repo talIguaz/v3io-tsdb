@@ -93,15 +93,15 @@ func (mc *MetricsCache) metricFeed(index int) {
 							if metric.getState() == storeStateInit {
 								metric.setState(storeStatePreGet)
 							}
-							if metric.isReady() {
-								mc.logger.WarnWith("metric feed - setting status to update",
-									"lset", metric.hash,
-									"state", metric.state,
-									"shouldGetState", metric.shouldGetState,
-									"name", metric.name,
-									"path", mc.partitionMngr.Path())
-								metric.setState(storeStateUpdate)
-							}
+							//if metric.isReady() {
+							//	mc.logger.WarnWith("metric feed - setting status to update",
+							//		"lset", metric.hash,
+							//		"state", metric.state,
+							//		"shouldGetState", metric.shouldGetState,
+							//		"name", metric.name,
+							//		"path", mc.partitionMngr.Path())
+							//	metric.setState(storeStateUpdate)
+							//}
 
 							length := mc.metricQueue.Push(metric)
 							if length < 2*mc.cfg.Workers {
