@@ -57,9 +57,13 @@ func (mc *MetricsCache) metricFeed(index int) {
 				return
 			case <-mc.updatesComplete: // Handle completion notifications from the update loop
 
+				inFlight := atomic.LoadInt64(&mc.requestsInFlight)
+				outstanding := atomic.LoadInt64(&mc.outstandingUpdates)
 				mc.logger.WarnWith("got updatesCompleted",
 					"len(mc.asyncAppendChan)", len(mc.asyncAppendChan),
-					"has completion chan", completeChan != nil)
+					"has completion chan", completeChan != nil,
+					"inFlight", inFlight,
+					"outstanding", outstanding)
 				switch len(mc.asyncAppendChan) {
 				case 0:
 					potentialCompletion = true
