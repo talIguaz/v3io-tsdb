@@ -94,6 +94,12 @@ func (mc *MetricsCache) metricFeed(index int) {
 								metric.setState(storeStatePreGet)
 							}
 							if metric.isReady() {
+								mc.logger.WarnWith("metric feed - setting status to update",
+									"lset", metric.hash,
+									"state", metric.state,
+									"shouldGetState", metric.shouldGetState,
+									"name", metric.name,
+									"path", mc.partitionMngr.Path())
 								metric.setState(storeStateUpdate)
 							}
 
@@ -244,7 +250,7 @@ func (mc *MetricsCache) postMetricUpdates(metric *MetricState) {
 	// In case we are in pre get state or our data spreads across multiple partitions, get the new state for the current partition
 	if metric.getState() == storeStatePreGet || (metric.isReady() && metric.shouldGetState) {
 		sent = mc.sendGetMetricState(metric)
-	} else if metric.isReady() {
+	} else {
 		sent, err = metric.store.writeChunks(mc, metric)
 		if err != nil {
 			// Count errors
@@ -419,6 +425,14 @@ func (mc *MetricsCache) handleResponse(metric *MetricState, resp *v3io.Response,
 	} else if metric.store.samplesQueueLength() > 0 {
 		mc.metricQueue.Push(metric)
 		metric.setState(storeStateUpdate)
+
+		mc.logger.WarnWith("handle response - setting status to update",
+			"lset", metric.hash,
+			"state", metric.state,
+			"shouldGetState", metric.shouldGetState,
+			"name", metric.name,
+			"path", mc.partitionMngr.Path(),
+			"canWrite", canWrite)
 	}
 
 	return sent
