@@ -93,9 +93,9 @@ func (mc *MetricsCache) metricFeed(index int) {
 							if metric.getState() == storeStateInit {
 								metric.setState(storeStatePreGet)
 							}
-							if metric.isReady() {
-								metric.setState(storeStateUpdate)
-							}
+							//if metric.isReady() {
+							//	metric.setState(storeStateUpdate)
+							//}
 
 							length := mc.metricQueue.Push(metric)
 							if length < 2*mc.cfg.Workers {
@@ -405,7 +405,6 @@ func (mc *MetricsCache) handleResponse(metric *MetricState, resp *v3io.Response,
 		}
 	} else if metric.store.samplesQueueLength() > 0 {
 		mc.metricQueue.Push(metric)
-		metric.setState(storeStateUpdate)
 	}
 
 	return sent
