@@ -157,6 +157,13 @@ func (cs *chunkStore) getChunksState(mc *MetricsCache, metric *MetricState) (boo
 	getInput := v3io.GetItemInput{
 		Path: path, AttributeNames: []string{config.MaxTimeAttrName}}
 
+	mc.logger.WarnWith("getChunksState",
+		"partition", path,
+		"lset", metric.hash,
+		"state", metric.state,
+		"shouldGetState", metric.shouldGetState,
+		"name", metric.name)
+
 	atomic.AddInt64(&mc.requestsInFlight, 1)
 	request, err := mc.container.GetItem(&getInput, metric, mc.responseChan)
 	if err != nil {
@@ -215,6 +222,15 @@ func (cs *chunkStore) processGetResp(mc *MetricsCache, metric *MetricState, resp
 	if val != nil {
 		maxTime = int64(val.(int))
 	}
+
+	mc.logger.WarnWith("set max time",
+		"new maxtime", maxTime,
+		"lset", metric.hash,
+		"state", metric.state,
+		"shouldGetState", metric.shouldGetState,
+		"name", metric.name,
+		"path", mc.partitionMngr.Path())
+
 	mc.logger.DebugWith("Got metric item", "name", metric.name, "key", metric.key, "maxt", maxTime)
 
 	if !mc.cfg.OverrideOld {
@@ -474,7 +490,7 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 			"state", metric.state,
 			"shouldGetState", metric.shouldGetState,
 			"name", metric.name,
-			"path", mc.partitionMngr.Path(),
+			"path", path,
 			"expr", expr,
 			"pending left", len(cs.pending))
 		// Add the async request ID to the requests map (can be avoided if V3IO
