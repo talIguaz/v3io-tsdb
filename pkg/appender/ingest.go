@@ -150,6 +150,12 @@ func (mc *MetricsCache) metricsUpdateLoop(index int) {
 					freeSlots := mc.cfg.Workers*2 - mc.updatesInFlight
 					metrics := mc.metricQueue.PopN(freeSlots)
 					for _, metric := range metrics {
+						mc.logger.WarnWith("post metric updates from new updates",
+							"lset", metric.hash,
+							"state", metric.state,
+							"shouldGetState", metric.shouldGetState,
+							"name", metric.name,
+							"path", mc.partitionMngr.Path())
 						mc.postMetricUpdates(metric)
 					}
 					if len(metrics) < freeSlots {
@@ -197,6 +203,12 @@ func (mc *MetricsCache) metricsUpdateLoop(index int) {
 						break
 					}
 					for _, metric := range metrics {
+						mc.logger.WarnWith("post metric updates from response channel",
+							"lset", metric.hash,
+							"state", metric.state,
+							"shouldGetState", metric.shouldGetState,
+							"name", metric.name,
+							"path", mc.partitionMngr.Path())
 						mc.postMetricUpdates(metric)
 					}
 				}
@@ -222,10 +234,17 @@ func (mc *MetricsCache) postMetricUpdates(metric *MetricState) {
 	var sent bool
 	var err error
 
+	mc.logger.WarnWith("post metric updates",
+		"lset", metric.hash,
+		"state", metric.state,
+		"shouldGetState", metric.shouldGetState,
+		"name", metric.name,
+		"path", mc.partitionMngr.Path())
+
 	// In case we are in pre get state or our data spreads across multiple partitions, get the new state for the current partition
 	if metric.getState() == storeStatePreGet || metric.shouldGetState {
 		sent = mc.sendGetMetricState(metric)
-	} else {
+	} else if metric.isReady() {
 		sent, err = metric.store.writeChunks(mc, metric)
 		if err != nil {
 			// Count errors
@@ -279,6 +298,14 @@ func (mc *MetricsCache) handleResponse(metric *MetricState, resp *v3io.Response,
 	defer resp.Release()
 	metric.Lock()
 	defer metric.Unlock()
+
+	mc.logger.WarnWith("handle response 1",
+		"lset", metric.hash,
+		"state", metric.state,
+		"shouldGetState", metric.shouldGetState,
+		"name", metric.name,
+		"path", mc.partitionMngr.Path(),
+		"canWrite", canWrite)
 
 	reqInput := resp.Request().Input
 
@@ -347,6 +374,14 @@ func (mc *MetricsCache) handleResponse(metric *MetricState, resp *v3io.Response,
 
 	var sent bool
 	var err error
+
+	mc.logger.WarnWith("handle response 2",
+		"lset", metric.hash,
+		"state", metric.state,
+		"shouldGetState", metric.shouldGetState,
+		"name", metric.name,
+		"path", mc.partitionMngr.Path(),
+		"canWrite", canWrite)
 
 	if canWrite {
 		// In case our data spreads across multiple partitions, get the new state for the current partition
