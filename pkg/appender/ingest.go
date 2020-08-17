@@ -59,39 +59,13 @@ func (mc *MetricsCache) metricFeed(index int) {
 				newMetrics := 0
 				dataQueued := 0
 				numPushed := 0
+				gotCompletion := false
 			inLoop:
 				for i := 0; i <= mc.cfg.BatchSize; i++ {
 					// Handle completion notifications from the update loop
 					if app.isCompletion {
-						outstandingUpdates := atomic.LoadInt64(&mc.outstandingUpdates)
-						requestsInFlight := atomic.LoadInt64(&mc.requestsInFlight)
-						mc.logger.WarnWith("got updatesCompleted",
-							"len(mc.asyncAppendChan)", len(mc.asyncAppendChan),
-							"has completion chan", completeChan != nil,
-							"inFlight", requestsInFlight,
-							"outstanding", outstandingUpdates)
-
-						if outstandingUpdates == 0 && requestsInFlight == 0 {
-							switch len(mc.asyncAppendChan) {
-							case 0:
-								potentialCompletion = true
-								if completeChan != nil {
-									completeChan <- 0
-								}
-							case 1:
-								potentialCompletion = true
-							}
-						}
-						if i < mc.cfg.BatchSize {
-							select {
-							case app = <-mc.asyncAppendChan:
-							default:
-								break inLoop
-							}
-						}
-						continue
-					}
-					if app.metric == nil {
+						gotCompletion = true
+					} else if app.metric == nil {
 						// Handle update completion requests (metric == nil)
 						completeChan = app.resp
 						if potentialCompletion {
@@ -144,6 +118,20 @@ func (mc *MetricsCache) metricFeed(index int) {
 				if newMetrics > 0 {
 					atomic.AddInt64(&mc.outstandingUpdates, 1)
 					mc.newUpdates <- newMetrics
+				} else if gotCompletion {
+					inFlight := atomic.LoadInt64(&mc.requestsInFlight)
+					outstanding := atomic.LoadInt64(&mc.outstandingUpdates)
+					if outstanding == 0 && inFlight == 0 {
+						switch len(mc.asyncAppendChan) {
+						case 0:
+							potentialCompletion = true
+							if completeChan != nil {
+								completeChan <- 0
+							}
+						case 1:
+							potentialCompletion = true
+						}
+					}
 				}
 
 				// If we have too much work, stall the queue for some time
