@@ -805,7 +805,9 @@ func (a v3ioAppender) Add(lset utils.Labels, t int64, v interface{}) (uint64, er
 
 // Faster Add using refID obtained from Add (avoid some hash/lookup overhead)
 func (a v3ioAppender) AddFast(lset utils.Labels, ref uint64, t int64, v interface{}) error {
-	return a.metricsCache.AddFast(ref, t, v)
+	_, err :=  a.metricsCache.Add(lset, t, v)
+	return err
+	//return a.metricsCache.AddFast(ref, t, v)
 }
 
 // Wait for completion of all updates

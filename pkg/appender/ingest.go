@@ -296,7 +296,8 @@ func (mc *MetricsCache) handleResponse(metric *MetricState, resp *v3io.Response,
 		} else {
 			clear := func() {
 				resp.Release()
-				metric.store = newChunkStore(mc.logger, metric.Lset.LabelNames(), metric.store.isAggr())
+				metric.store = newChunkStore(mc.logger, metric.Lset.LabelNames(), metric.store.isAggr(),
+					metric.store.partition)
 				metric.retryCount = 0
 				metric.setState(storeStateInit)
 			}

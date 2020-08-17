@@ -42,10 +42,11 @@ import (
 const maxLateArrivalInterval = 59 * 60 * 1000 // Max late arrival of 59min
 
 // Create a chunk store with two chunks (current, previous)
-func newChunkStore(logger logger.Logger, labelNames []string, aggrsOnly bool) *chunkStore {
+func newChunkStore(logger logger.Logger, labelNames []string, aggrsOnly bool, partition *partmgr.DBPartition) *chunkStore {
 	store := chunkStore{
 		logger:  logger,
 		lastTid: -1,
+		partition: partition,
 	}
 	if !aggrsOnly {
 		store.chunks[0] = &attrAppender{}
@@ -65,6 +66,7 @@ type chunkStore struct {
 	nextTid  int64
 	lastTid  int64
 	chunks   [2]*attrAppender
+	partition *partmgr.DBPartition
 
 	labelNames    []string
 	aggrList      *aggregate.AggregatesList
@@ -140,20 +142,17 @@ func (cs *chunkStore) getChunksState(mc *MetricsCache, metric *MetricState) (boo
 	}
 	// Init chunk and create an aggregates-list object based on the partition policy
 	t := cs.pending[0].t
-	part, err := mc.partitionMngr.TimeToPart(t)
-	if err != nil {
-		return false, err
-	}
+
 	if !cs.isAggr() {
-		cs.chunks[0].initialize(part, t)
+		cs.chunks[0].initialize(cs.partition, t)
 	}
 	cs.nextTid = t
-	cs.aggrList = aggregate.NewAggregatesList(part.AggrType())
+	cs.aggrList = aggregate.NewAggregatesList(cs.partition.AggrType())
 
 	// TODO: if policy to merge w old chunks needs to get prev chunk, vs restart appender
 
 	// Issue a GetItem command to the DB to load last state of metric
-	path := part.GetMetricPath(metric.name, metric.hash, cs.labelNames, cs.isAggr())
+	path := cs.partition.GetMetricPath(metric.name, metric.hash, cs.labelNames, cs.isAggr())
 	getInput := v3io.GetItemInput{
 		Path: path, AttributeNames: []string{config.MaxTimeAttrName}}
 
@@ -297,27 +296,23 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 
 		// Init the partition info and find whether we need to init the metric headers (labels, ..) in the case of a new partition
 		t0 := cs.pending[0].t
-		partition, err := mc.partitionMngr.TimeToPart(t0)
-		if err != nil {
-			hasPendingUpdates = false
-			return
-		}
-		if partition.GetStartTime() > cs.lastTid {
+
+		if cs.partition.GetStartTime() > cs.lastTid {
 			notInitialized = true
-			cs.lastTid = partition.GetStartTime()
+			cs.lastTid = cs.partition.GetStartTime()
 		}
 
 		// Init the aggregation-buckets info
-		bucket := partition.Time2Bucket(t0)
-		numBuckets := partition.AggrBuckets()
-		isNewBucket := bucket > partition.Time2Bucket(cs.maxTime)
+		bucket := cs.partition.Time2Bucket(t0)
+		numBuckets := cs.partition.AggrBuckets()
+		isNewBucket := bucket > cs.partition.Time2Bucket(cs.maxTime)
 
 		var activeChunk *attrAppender
 		var pendingSampleIndex int
 		var pendingSamplesCount int
 
 		// Loop over pending samples, add to chunks & aggregates (create required update expressions)
-		for pendingSampleIndex < len(cs.pending) && pendingSamplesCount < mc.cfg.BatchSize && partition.InRange(cs.pending[pendingSampleIndex].t) {
+		for pendingSampleIndex < len(cs.pending) && pendingSamplesCount < mc.cfg.BatchSize {
 			sampleTime := cs.pending[pendingSampleIndex].t
 
 			if sampleTime <= cs.maxTime && !mc.cfg.OverrideOld {
@@ -368,7 +363,7 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 
 			// If this is the last item or last item in the same partition, add
 			// expressions and break
-			if (pendingSampleIndex == len(cs.pending)-1) || pendingSamplesCount == mc.cfg.BatchSize-1 || !partition.InRange(cs.pending[pendingSampleIndex+1].t) {
+			if (pendingSampleIndex == len(cs.pending)-1) || pendingSamplesCount == mc.cfg.BatchSize-1 {
 				expr = expr + cs.aggrList.SetOrUpdateExpr("v", bucket, isNewBucket)
 				expr = expr + cs.appendExpression(activeChunk)
 				pendingSampleIndex++
@@ -379,7 +374,7 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 			// If the next item is in new Aggregate bucket, generate an
 			// expression and initialize the new bucket
 			nextT := cs.pending[pendingSampleIndex+1].t
-			nextBucket := partition.Time2Bucket(nextT)
+			nextBucket := cs.partition.Time2Bucket(nextT)
 			if nextBucket != bucket {
 				expr = expr + cs.aggrList.SetOrUpdateExpr("v", bucket, isNewBucket)
 				cs.aggrList.Clear()
@@ -444,7 +439,7 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 				config.EncodingAttrName, activeChunk.appender.Encoding())
 		}
 		expr += fmt.Sprintf("%v=%d;", config.MaxTimeAttrName, cs.maxTime) // TODO: use max() expr
-		path := partition.GetMetricPath(metric.name, metric.hash, cs.labelNames, cs.isAggr())
+		path := cs.partition.GetMetricPath(metric.name, metric.hash, cs.labelNames, cs.isAggr())
 		atomic.AddInt64(&mc.requestsInFlight, 1)
 		request, err := mc.container.UpdateItem(
 			&v3io.UpdateItemInput{Path: path, Expression: &expr, Condition: conditionExpr}, metric, mc.responseChan)
