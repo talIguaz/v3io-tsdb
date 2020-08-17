@@ -56,33 +56,39 @@ func (mc *MetricsCache) metricFeed(index int) {
 			case _ = <-mc.stopChan:
 				return
 			case app := <-mc.asyncAppendChan:
-				// Handle completion notifications from the update loop
-				if app.isCompletion {
-					inFlight := atomic.LoadInt64(&mc.requestsInFlight)
-					outstanding := atomic.LoadInt64(&mc.outstandingUpdates)
-					mc.logger.WarnWith("got updatesCompleted",
-						"len(mc.asyncAppendChan)", len(mc.asyncAppendChan),
-						"has completion chan", completeChan != nil,
-						"inFlight", inFlight,
-						"outstanding", outstanding)
-
-					switch len(mc.asyncAppendChan) {
-					case 0:
-						potentialCompletion = true
-						if completeChan != nil {
-							completeChan <- 0
-						}
-					case 1:
-						potentialCompletion = true
-					}
-					continue
-				}
-
 				newMetrics := 0
 				dataQueued := 0
 				numPushed := 0
 			inLoop:
 				for i := 0; i <= mc.cfg.BatchSize; i++ {
+					// Handle completion notifications from the update loop
+					if app.isCompletion {
+						inFlight := atomic.LoadInt64(&mc.requestsInFlight)
+						outstanding := atomic.LoadInt64(&mc.outstandingUpdates)
+						mc.logger.WarnWith("got updatesCompleted",
+							"len(mc.asyncAppendChan)", len(mc.asyncAppendChan),
+							"has completion chan", completeChan != nil,
+							"inFlight", inFlight,
+							"outstanding", outstanding)
+
+						switch len(mc.asyncAppendChan) {
+						case 0:
+							potentialCompletion = true
+							if completeChan != nil {
+								completeChan <- 0
+							}
+						case 1:
+							potentialCompletion = true
+						}
+						if i < mc.cfg.BatchSize {
+							select {
+							case app = <-mc.asyncAppendChan:
+							default:
+								break inLoop
+							}
+						}
+						continue
+					}
 					if app.metric == nil {
 						// Handle update completion requests (metric == nil)
 						completeChan = app.resp
