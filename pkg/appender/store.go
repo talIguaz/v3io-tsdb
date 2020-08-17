@@ -330,6 +330,13 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 			hasPendingUpdates = false
 			return
 		}
+
+		// In case the current max time is not up to date, force a get state
+		if partition.GetStartTime() > cs.maxTime {
+			metric.shouldGetState = true
+			hasPendingUpdates = false
+			return
+		}
 		if partition.GetStartTime() > cs.lastTid {
 			notInitialized = true
 			cs.lastTid = partition.GetStartTime()
