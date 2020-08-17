@@ -98,6 +98,10 @@ func (p *PartitionManager) Init() error {
 	return nil
 }
 
+func (p *PartitionManager) GetPartitionStartTime(t int64) int64 {
+	return p.currentPartitionInterval * (t / p.currentPartitionInterval)
+}
+
 func (p *PartitionManager) TimeToPart(t int64) (*DBPartition, error) {
 	if p.headPartition == nil {
 		// Rounding t to the nearest PartitionInterval multiple

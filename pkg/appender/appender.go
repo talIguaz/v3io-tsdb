@@ -96,8 +96,9 @@ func (m *MetricState) error() error {
 }
 
 type cacheKey struct {
-	name string
-	hash uint64
+	name               string
+	hash               uint64
+	partitionStartTime int64
 }
 
 // store the state and metadata for all the metrics
@@ -174,23 +175,23 @@ func (mc *MetricsCache) Start() error {
 }
 
 // return metric struct by key
-func (mc *MetricsCache) getMetric(name string, hash uint64) (*MetricState, bool) {
+func (mc *MetricsCache) getMetric(name string, hash uint64, partitionStartTime int64) (*MetricState, bool) {
 	mc.mtx.RLock()
 	defer mc.mtx.RUnlock()
 
-	metric, ok := mc.cacheMetricMap[cacheKey{name, hash}]
+	metric, ok := mc.cacheMetricMap[cacheKey{name, hash, partitionStartTime}]
 	return metric, ok
 }
 
 // create a new metric and save in the map
-func (mc *MetricsCache) addMetric(hash uint64, name string, metric *MetricState) {
+func (mc *MetricsCache) addMetric(hash uint64, name string, metric *MetricState, partitionStartTime int64) {
 	mc.mtx.Lock()
 	defer mc.mtx.Unlock()
 
 	mc.lastMetric++
 	metric.refID = mc.lastMetric
 	mc.cacheRefMap[mc.lastMetric] = metric
-	mc.cacheMetricMap[cacheKey{name, hash}] = metric
+	mc.cacheMetricMap[cacheKey{name, hash, partitionStartTime}] = metric
 	if _, ok := mc.NameLabelMap[name]; !ok {
 		metric.newName = true
 		mc.NameLabelMap[name] = true
@@ -233,18 +234,20 @@ func (mc *MetricsCache) Add(lset utils.LabelsIfc, t int64, v interface{}) (uint6
 	if err != nil {
 		return 0, err
 	}
-	metric, ok := mc.getMetric(name, hash)
+
+	partitionStartTime := mc.partitionMngr.GetPartitionStartTime(t)
+	metric, ok := mc.getMetric(name, hash, partitionStartTime)
 
 	var aggrMetrics []*MetricState
 	if !ok {
 		for _, preAggr := range mc.partitionMngr.GetConfig().TableSchemaInfo.PreAggregates {
 			subLset := lset.Filter(preAggr.Labels)
 			name, key, hash := subLset.GetKey()
-			aggrMetric, ok := mc.getMetric(name, hash)
+			aggrMetric, ok := mc.getMetric(name, hash, partitionStartTime)
 			if !ok {
 				aggrMetric = &MetricState{Lset: subLset, key: key, name: name, hash: hash}
 				aggrMetric.store = newChunkStore(mc.logger, subLset.LabelNames(), true)
-				mc.addMetric(hash, name, aggrMetric)
+				mc.addMetric(hash, name, aggrMetric, partitionStartTime)
 				aggrMetrics = append(aggrMetrics, aggrMetric)
 			}
 		}
@@ -252,7 +255,7 @@ func (mc *MetricsCache) Add(lset utils.LabelsIfc, t int64, v interface{}) (uint6
 			aggrs: aggrMetrics, isVariant: isValueVariantType}
 
 		metric.store = newChunkStore(mc.logger, lset.LabelNames(), false)
-		mc.addMetric(hash, name, metric)
+		mc.addMetric(hash, name, metric, partitionStartTime)
 	} else {
 		aggrMetrics = metric.aggrs
 	}
