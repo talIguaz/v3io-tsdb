@@ -212,6 +212,7 @@ func (cs *chunkStore) processGetResp(mc *MetricsCache, metric *MetricState, resp
 		}
 
 		metric.shouldGetState = false
+		cs.maxTime = 0 // In case of an error, initialize max time back to default
 		return
 	}
 
@@ -332,7 +333,7 @@ func (cs *chunkStore) writeChunks(mc *MetricsCache, metric *MetricState) (hasPen
 		}
 
 		// In case the current max time is not up to date, force a get state
-		if partition.GetStartTime() > cs.maxTime {
+		if partition.GetStartTime() > cs.maxTime && cs.maxTime > 0 {
 			metric.shouldGetState = true
 			hasPendingUpdates = false
 			return

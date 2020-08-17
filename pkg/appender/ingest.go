@@ -459,10 +459,16 @@ func (mc *MetricsCache) handleResponse(metric *MetricState, resp *v3io.Response,
 		} else if sent {
 			metric.setState(storeStateUpdate)
 			mc.updatesInFlight++
+		} else if metric.shouldGetState {
+			// In case we didn't write any data and the metric state needs to be updated, update it straight away
+			sent = mc.sendGetMetricState(metric)
+			if sent {
+				mc.updatesInFlight++
+			}
 		}
 	} else if metric.store.samplesQueueLength() > 0 {
 		mc.metricQueue.Push(metric)
-		metric.setState(storeStateUpdate)
+		metric.setState(storeStateAboutToUpdate)
 
 		mc.logger.WarnWith("handle response - setting status to update",
 			"lset", metric.hash,
