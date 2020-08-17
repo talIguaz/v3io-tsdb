@@ -80,6 +80,10 @@ func (m *MetricState) isReady() bool {
 	return m.state == storeStateReady
 }
 
+func (m *MetricState) canSendRequests() bool {
+	return m.state == storeStateReady || m.state == storeStateAboutToUpdate
+}
+
 func (m *MetricState) getState() storeState {
 	return m.state
 }

@@ -284,9 +284,9 @@ func (mc *MetricsCache) postMetricUpdates(metric *MetricState) {
 
 	// In case we are in pre get state or our data spreads across multiple partitions, get the new state for the current partition
 	if metric.getState() == storeStatePreGet ||
-		((metric.isReady() || metric.getState() == storeStateAboutToUpdate) && metric.shouldGetState) {
+		(metric.canSendRequests() && metric.shouldGetState) {
 		sent = mc.sendGetMetricState(metric)
-	} else {
+	} else if metric.canSendRequests() {
 		sent, err = metric.store.writeChunks(mc, metric)
 		if err != nil {
 			// Count errors
