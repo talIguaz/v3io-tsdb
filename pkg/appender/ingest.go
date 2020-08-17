@@ -55,25 +55,29 @@ func (mc *MetricsCache) metricFeed(index int) {
 			select {
 			case _ = <-mc.stopChan:
 				return
-			case <-mc.updatesComplete: // Handle completion notifications from the update loop
-
-				inFlight := atomic.LoadInt64(&mc.requestsInFlight)
-				outstanding := atomic.LoadInt64(&mc.outstandingUpdates)
-				mc.logger.WarnWith("got updatesCompleted",
-					"len(mc.asyncAppendChan)", len(mc.asyncAppendChan),
-					"has completion chan", completeChan != nil,
-					"inFlight", inFlight,
-					"outstanding", outstanding)
-				switch len(mc.asyncAppendChan) {
-				case 0:
-					potentialCompletion = true
-					if completeChan != nil {
-						completeChan <- 0
-					}
-				case 1:
-					potentialCompletion = true
-				}
 			case app := <-mc.asyncAppendChan:
+				// Handle completion notifications from the update loop
+				if app.isCompletion {
+					inFlight := atomic.LoadInt64(&mc.requestsInFlight)
+					outstanding := atomic.LoadInt64(&mc.outstandingUpdates)
+					mc.logger.WarnWith("got updatesCompleted",
+						"len(mc.asyncAppendChan)", len(mc.asyncAppendChan),
+						"has completion chan", completeChan != nil,
+						"inFlight", inFlight,
+						"outstanding", outstanding)
+
+					switch len(mc.asyncAppendChan) {
+					case 0:
+						potentialCompletion = true
+						if completeChan != nil {
+							completeChan <- 0
+						}
+					case 1:
+						potentialCompletion = true
+					}
+					break
+				}
+
 				newMetrics := 0
 				dataQueued := 0
 				numPushed := 0
@@ -185,7 +189,7 @@ func (mc *MetricsCache) metricsUpdateLoop(index int) {
 					mc.logger.WarnWith("Return to feed after processing newUpdates",
 						"outstandingUpdates", outstandingUpdates,
 						"requestsInFlight", a)
-					mc.updatesComplete <- 0
+					mc.asyncAppendChan <- &asyncAppend{isCompletion: true}
 				}
 			case resp := <-mc.responseChan:
 				// Handle V3IO async responses
@@ -248,7 +252,8 @@ func (mc *MetricsCache) metricsUpdateLoop(index int) {
 					mc.logger.WarnWith("Return to feed after processing responseChan",
 						"requestsInFlight", requestsInFlight,
 						"outstandingUpdates", a)
-					mc.updatesComplete <- 0
+
+					mc.asyncAppendChan <- &asyncAppend{isCompletion: true}
 				}
 			}
 		}
@@ -493,7 +498,7 @@ func (mc *MetricsCache) nameUpdateRespLoop() {
 
 				if requestsInFlight == 0 && atomic.LoadInt64(&mc.outstandingUpdates) == 0 {
 					mc.logger.Debug("Return to feed after processing nameUpdateChan")
-					mc.updatesComplete <- 0
+					mc.asyncAppendChan <- &asyncAppend{isCompletion: true}
 				}
 			}
 		}
