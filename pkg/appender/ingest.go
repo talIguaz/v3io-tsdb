@@ -263,7 +263,6 @@ func (mc *MetricsCache) postMetricUpdates(metric *MetricState) {
 	metric.Lock()
 	defer metric.Unlock()
 	var sent bool
-	var err error
 
 	mc.logger.WarnWith("post metric updates",
 		"lset", metric.hash,
@@ -276,17 +275,12 @@ func (mc *MetricsCache) postMetricUpdates(metric *MetricState) {
 	if metric.getState() == storeStatePreGet ||
 		(metric.canSendRequests() && metric.shouldGetState) {
 		sent = mc.sendGetMetricState(metric)
-	} else if metric.canSendRequests() {
-		sent, err = metric.store.writeChunks(mc, metric)
-		if err != nil {
-			// Count errors
-			mc.performanceReporter.IncrementCounter("WriteChunksError", 1)
-
-			mc.logger.ErrorWith("Submit failed", "metric", metric.Lset, "err", err)
-			setError(mc, metric, errors.Wrap(err, "Chunk write submit failed."))
-		} else if sent {
-			metric.setState(storeStateUpdate)
+		if sent {
+			mc.updatesInFlight++
 		}
+	} else if metric.canSendRequests() {
+		sent = mc.writeChunksAndGetState(metric)
+
 		if !sent {
 			if metric.store.samplesQueueLength() == 0 {
 				metric.setState(storeStateReady)
@@ -299,9 +293,6 @@ func (mc *MetricsCache) postMetricUpdates(metric *MetricState) {
 		}
 	}
 
-	if sent {
-		mc.updatesInFlight++
-	}
 }
 
 func (mc *MetricsCache) sendGetMetricState(metric *MetricState) bool {
@@ -336,6 +327,27 @@ func (mc *MetricsCache) sendGetMetricState(metric *MetricState) bool {
 		"path", mc.partitionMngr.Path(),
 		"sent", sent)
 
+	return sent
+}
+
+func (mc *MetricsCache) writeChunksAndGetState(metric *MetricState) bool {
+	sent, err := metric.store.writeChunks(mc, metric)
+	if err != nil {
+		// Count errors
+		mc.performanceReporter.IncrementCounter("WriteChunksError", 1)
+
+		mc.logger.ErrorWith("Submit failed", "metric", metric.Lset, "err", err)
+		setError(mc, metric, errors.Wrap(err, "Chunk write submit failed."))
+	} else if sent {
+		metric.setState(storeStateUpdate)
+	} else if metric.shouldGetState {
+		// In case we didn't write any data and the metric state needs to be updated, update it straight away
+		sent = mc.sendGetMetricState(metric)
+	}
+
+	if sent {
+		mc.updatesInFlight++
+	}
 	return sent
 }
 
@@ -420,7 +432,6 @@ func (mc *MetricsCache) handleResponse(metric *MetricState, resp *v3io.Response,
 	metric.setState(storeStateReady)
 
 	var sent bool
-	var err error
 
 	mc.logger.WarnWith("handle response 2",
 		"lset", metric.hash,
@@ -437,23 +448,7 @@ func (mc *MetricsCache) handleResponse(metric *MetricState, resp *v3io.Response,
 			mc.updatesInFlight++
 		}
 	} else if canWrite {
-		sent, err = metric.store.writeChunks(mc, metric)
-		if err != nil {
-			// Count errors
-			mc.performanceReporter.IncrementCounter("WriteChunksError", 1)
-
-			mc.logger.ErrorWith("Submit failed", "metric", metric.Lset, "err", err)
-			setError(mc, metric, errors.Wrap(err, "Chunk write submit failed."))
-		} else if sent {
-			metric.setState(storeStateUpdate)
-			mc.updatesInFlight++
-		} else if metric.shouldGetState {
-			// In case we didn't write any data and the metric state needs to be updated, update it straight away
-			sent = mc.sendGetMetricState(metric)
-			if sent {
-				mc.updatesInFlight++
-			}
-		}
+		sent = mc.writeChunksAndGetState(metric)
 	} else if metric.store.samplesQueueLength() > 0 {
 		mc.metricQueue.Push(metric)
 		metric.setState(storeStateAboutToUpdate)
