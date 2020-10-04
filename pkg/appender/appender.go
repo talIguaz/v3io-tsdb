@@ -222,6 +222,7 @@ func (mc *MetricsCache) appendTV(metric *MetricState, t int64, v interface{}) {
 // First time add time & value to metric (by label set)
 func (mc *MetricsCache) Add(lset utils.LabelsIfc, t int64, v interface{}) (uint64, error) {
 
+	mc.logger.WarnWith("MetricCache add", "lset", lset, "t", t, "v", v)
 	err := verifyTimeValid(t)
 	if err != nil {
 		return 0, err
@@ -280,6 +281,7 @@ func (mc *MetricsCache) Add(lset utils.LabelsIfc, t int64, v interface{}) (uint6
 		return 0, errors.Errorf("Cannot append %v type metric to %v type metric.", newValueType, existingValueType)
 	}
 
+	mc.logger.WarnWith("MetricCache appending TV", "metric", metric.Lset, "key", metric.key, "t", t, "v", v)
 	mc.appendTV(metric, t, v)
 	for _, aggrMetric := range aggrMetrics {
 		mc.appendTV(aggrMetric, t, v)

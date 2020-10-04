@@ -77,6 +77,8 @@ func (mc *MetricsCache) metricFeed(index int) {
 						metric := app.metric
 						metric.Lock()
 
+						mc.logger.WarnWith("Got metric in metricFeed",
+							"metric", metric.Lset, "key", metric.key, "t", app.t, "v", app.v)
 						metric.store.Append(app.t, app.v)
 						numPushed++
 						dataQueued += metric.store.samplesQueueLength()
